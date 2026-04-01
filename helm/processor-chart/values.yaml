@@ -1,0 +1,16 @@
+replicaCount: 1
+
+image:
+  repository: #{Project.Repository}
+  tag: #{Octopus.Release.Number}
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: registry-pull-secret
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  connectionString: "Server=demo-database;Database=DemoDb;User Id=sa;Password=;"

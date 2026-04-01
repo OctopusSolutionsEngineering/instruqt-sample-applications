@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-frontend
+  labels:
+    app: demo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-frontend
+  template:
+    metadata:
+      labels:
+        app: demo-frontend
+    spec:
+      imagePullSecrets:
+        - name: registry-pull-secret
+      containers:
+        - name: frontend
+          image: gitea:3000/admin/sample-frontend:#{Octopus.Release.Number}
+          ports:
+            - containerPort: 5151
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:5151"
+            - name: ApiBaseUrl
+              value: "http://demo-api/api"

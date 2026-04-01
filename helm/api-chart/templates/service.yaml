@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "demo-api.fullname" . }}
+spec:
+  selector:
+    app: {{ include "demo-api.name" . }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 80
+  type: {{ .Values.service.type }}

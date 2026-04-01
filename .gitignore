@@ -1,0 +1,46 @@
+# Build output
+bin/
+obj/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Test results
+TestResults/
+coverage/
+
+# .NET user secrets (never commit these)
+**/secrets.json
+**/usersecrets/
+
+# Environment / credential files
+.env
+.env.*
+*.pfx
+*.key
+*.pem
+*.cer
+*.p12
+
+# SQLite databases (generated at runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# Published output
+publish/
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: financia-retail-set
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - app: api
+                  octopus_project: "sample-api"
+                  image_name: "gitea:3000/admin/sample-api"
+                - app: frontend
+                  octopus_project: "sample-frontend"
+                  image_name: "gitea:3000/admin/sample-frontend"
+          - list:
+              elements:
+                - env: development
+                - env: test
+                - env: staging
+                - env: production
+  template:
+    metadata:
+      name: 'financia-{{app}}-{{env}}'
+      annotations:
+        argo.octopus.com/project: "{{octopus_project}}"
+        argo.octopus.com/environment: "{{env}}"
+        argo.octopus.com/image-replace-paths: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+    spec:
+      project: default
+      source:
+        repoURL: http://gitea:3000/admin/instruqt-sample-applications.git
+        targetRevision: HEAD
+        path: 'helm/{{app}}-chart'
+        helm:
+          valueFiles:
+            - 'values-{{env}}.yaml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{app}}-{{env}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

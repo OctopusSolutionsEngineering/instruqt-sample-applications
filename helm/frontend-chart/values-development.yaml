@@ -1,0 +1,17 @@
+
+replicaCount: 1
+
+image:
+  repository: gitea:3000/admin/sample-frontend
+  tag: '#{Octopus.Release.Number}'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: registry-pull-secret
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  connectionString: "Server=demo-database;Database=DemoDb;User Id=sa;Password=;"

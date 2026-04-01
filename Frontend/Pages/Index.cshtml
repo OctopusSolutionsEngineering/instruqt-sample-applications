@@ -1,0 +1,52 @@
+
+@page
+@model ItemsModel
+@{
+    ViewData["Title"] = "Items";
+}
+
+<h2>Items</h2>
+
+<ul id="itemsList"></ul>
+
+<h3>Add New Item</h3>
+<form id="addItemForm">
+    <label>Title: <input type="text" id="title" required /></label><br/>
+    <label>Description: <input type="text" id="description" /></label><br/>
+    <button type="submit">Add</button>
+</form>
+
+@inject Microsoft.Extensions.Options.IOptions<FrontendConfig> Config
+
+<script>
+  const apiBase = "@(Config.Value.ApiBaseUrl)/items";
+
+    async function loadItems() {
+        const res = await fetch(apiBase);
+        const items = await res.json();
+        const list = document.getElementById("itemsList");
+        list.innerHTML = "";
+        items.forEach(item => {
+            const li = document.createElement("li");
+            li.textContent = `${item.title} - ${item.description}`;
+            list.appendChild(li);
+        });
+    }
+
+    document.getElementById("addItemForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const title = document.getElementById("title").value;
+        const description = document.getElementById("description").value;
+
+        await fetch(apiBase, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description })
+        });
+
+        document.getElementById("addItemForm").reset();
+        loadItems();
+    });
+
+    loadItems();
+</script>

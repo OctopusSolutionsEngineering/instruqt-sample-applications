@@ -1,0 +1,21 @@
+@Api_HostAddress = http://localhost:5000
+
+### Get all items
+GET {{Api_HostAddress}}/api/items
+Accept: application/json
+
+### Get a single item by ID
+GET {{Api_HostAddress}}/api/items/1
+Accept: application/json
+
+### Create a new item
+POST {{Api_HostAddress}}/api/items
+Content-Type: application/json
+
+{
+  "title": "Sample Item",
+  "description": "This is a demo item"
+}
+
+### Delete item
+DELETE {{Api_HostAddress}}/api/items/1
