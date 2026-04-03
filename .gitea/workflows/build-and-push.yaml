@@ -1,0 +1,58 @@
+name: Build and Push Images
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        run: |
+          git clone --depth 1 --branch "${{ github.ref_name }}" \
+            "${{ github.server_url }}/${{ github.repository }}.git" .
+
+      - name: Generate semantic version
+        id: vars
+        run: |
+          MAJOR=1
+          MINOR=0
+          PATCH=${{ github.run_number }}
+          RELEASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $RELEASE_VERSION"
+
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name builder || docker buildx use builder
+
+      - name: Log in to Gitea Container Registry
+        run: |
+          echo "${{ secrets.GITEA_TOKEN }}" | docker login gitea:3000 \
+            -u "${{ secrets.GITEA_USERNAME }}" --password-stdin
+
+      # --- Frontend ---
+      - name: Build & Push Frontend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --provenance=false \
+            --output "type=registry,oci-mediatypes=false" \
+            -t "gitea:3000/admin/sample-frontend:${{ env.RELEASE_VERSION }}" \
+            -t "gitea:3000/admin/sample-frontend:latest" \
+            Frontend/
+
+      # --- API ---
+      - name: Build & Push API
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --provenance=false \
+            --output "type=registry,oci-mediatypes=false" \
+            -t "gitea:3000/admin/sample-api:${{ env.RELEASE_VERSION }}" \
+            -t "gitea:3000/admin/sample-api:latest" \
+            Api/
