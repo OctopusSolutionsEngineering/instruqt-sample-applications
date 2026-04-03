@@ -30,8 +30,8 @@ jobs:
 
       - name: Log in to Gitea Container Registry
         run: |
-          echo "${{ secrets.GITEA_TOKEN }}" | docker login gitea:3000 \
-            -u "${{ secrets.GITEA_USERNAME }}" --password-stdin
+          echo "${{ secrets.GITEATOKEN }}" | docker login gitea:3000 \
+            -u "${{ secrets.GITEAßUSERNAME }}" --password-stdin
 
       # --- Frontend ---
       - name: Build & Push Frontend
