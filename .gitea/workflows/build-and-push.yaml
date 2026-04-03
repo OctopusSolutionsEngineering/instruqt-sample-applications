@@ -26,12 +26,12 @@ jobs:
 
       - name: Set up Docker Buildx
         run: |
-          docker buildx create --use --name builder || docker buildx use builder
+          docker buildx use instruqt-builder || docker buildx create --name instruqt-builder --config /etc/buildkit/buildkitd.toml --use --bootstrap
 
       - name: Log in to Gitea Container Registry
         run: |
           echo "${{ secrets.GITEATOKEN }}" | docker login gitea:3000 \
-            -u "${{ secrets.GITEAßUSERNAME }}" --password-stdin
+            -u "${{ secrets.GITEAUSERNAME }}" --password-stdin
 
       # --- Frontend ---
       - name: Build & Push Frontend
