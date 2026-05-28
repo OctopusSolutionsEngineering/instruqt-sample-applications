@@ -24,14 +24,26 @@ jobs:
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $RELEASE_VERSION"
 
-      - name: Set up Docker Buildx
-        run: |
-          docker buildx use instruqt-builder || docker buildx create --name instruqt-builder --config /etc/buildkit/buildkitd.toml --use --bootstrap
-
       - name: Log in to Gitea Container Registry
         run: |
-          echo "${{ secrets.GITEATOKEN }}" | docker login gitea:3000 \
-            -u "${{ secrets.GITEAUSERNAME }}" --password-stdin
+            mkdir -p ~/.docker
+            printf '{"auths":{"gitea:3000":{"auth":"%s"}}}' \
+            "$(echo -n "${{ secrets.GITEAUSERNAME }}:${{ secrets.GITEATOKEN }}" | base64 -w 0)" \
+            > ~/.docker/config.json
+
+
+      - name: Set up Docker Buildx
+        run: |
+          cat > buildkitd.toml <<EOF
+          [registry."gitea:3000"]
+            http = true
+            insecure = true
+            username = "${{ secrets.GITEAUSERNAME }}"
+            password = "${{ secrets.GITEATOKEN }}"
+          EOF
+          docker buildx rm instruqt-builder 2>/dev/null || true
+          docker buildx use instruqt-builder || docker buildx create --name instruqt-builder --config buildkitd.toml --use --bootstrap --driver-opt network=octopusdeploy_default
+
 
       # --- Frontend ---
       - name: Build & Push Frontend
@@ -40,9 +52,14 @@ jobs:
             --platform linux/amd64 \
             --provenance=false \
             --output "type=registry,oci-mediatypes=false" \
+            --secret id=REGISTRY_USER,env=REGISTRY_USER \
+            --secret id=REGISTRY_PASS,env=REGISTRY_PASS \
             -t "gitea:3000/admin/sample-frontend:${{ env.RELEASE_VERSION }}" \
             -t "gitea:3000/admin/sample-frontend:latest" \
             Frontend/
+        env:
+          REGISTRY_USER: ${{ secrets.GITEAUSERNAME }}
+          REGISTRY_PASS: ${{ secrets.GITEATOKEN }}
 
       # --- API ---
       - name: Build & Push API
