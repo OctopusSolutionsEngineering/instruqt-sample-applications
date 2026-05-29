@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: gitea:3000/admin/sample-frontend
-  tag: '#{Octopus.Release.Number}'
+  tag: '1.0.1'
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
