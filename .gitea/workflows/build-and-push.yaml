@@ -40,6 +40,9 @@ jobs:
             insecure = true
             username = "${{ secrets.GITEAUSERNAME }}"
             password = "${{ secrets.GITEATOKEN }}"
+          [registry."registry:5000"]
+            http = true
+            insecure = true
           EOF
           docker buildx rm instruqt-builder 2>/dev/null || true
           docker buildx use instruqt-builder || docker buildx create --name instruqt-builder --config buildkitd.toml --use --bootstrap --driver-opt network=octopusdeploy_default
