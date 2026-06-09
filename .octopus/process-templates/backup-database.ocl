@@ -1,0 +1,74 @@
+name = "Backup Database "
+description = "A standardized runbook process to back up a database on demand or as part of a scheduled job. This process ensures data durability and recovery readiness by creating a consistent backup of the target database, securely storing it in a configured location, and validating its integrity. It can be adapted for multiple database engines (SQL Server, MySQL, PostgreSQL, Oracle, etc.) and supports encryption, compression, and retention policies. Ideal for disaster recovery preparedness, environment refreshes, and compliance requirements."
+
+parameter "template.workpool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = ""
+    label = "Worker Pool"
+}
+
+step "initialize-backup-job" {
+    name = "Initialize Backup Job"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Initialize Backup Job\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.workpool}"
+    }
+}
+
+step "run-backup-command" {
+    name = "Run Backup Command"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Run Backup Command\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.workpool}"
+    }
+}
+
+step "store-backup-artifact" {
+    name = "Store Backup Artifact"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Store Backup Artifact\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.workpool}"
+    }
+}
+
+step "verify-backup-integrity" {
+    name = "Verify Backup Integrity"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Verify Backup Integrity\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.workpool}"
+    }
+}

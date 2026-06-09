@@ -1,0 +1,172 @@
+name = "Golden Helm Template"
+description = "A reusable process template for deploying Helm charts in a standardized and compliant manner. This template includes built-in best practices for versioning, environment targeting, and audit visibility. Ideal for teams adopting GitOps or managing Kubernetes workloads at scale."
+
+parameter "template.kubernetes.target.tag" {
+    display_settings = {
+        Octopus.ControlType = "TargetTags"
+    }
+    help_text = "The Kubernetes cluster you want to install this helm chart on"
+    label = "Kubernetes Target Tag"
+}
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Choose the work pool where to run scripts"
+    label = "Worker Pool"
+}
+
+parameter "template.chart.directory" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "The Chart Directory of the helm chart"
+    label = "Chart Directory"
+}
+
+parameter "template.kubernetes.namespace" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Kubernetes Namespace to deploy the Helm chart"
+    label = "Kubernetes Namespace"
+}
+
+parameter "template.repository.url" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Repository URL for the Helm Chart"
+    label = "Repository URL"
+}
+
+parameter "template.chart.values" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Location of chart Values "
+    label = "Chart Values"
+}
+
+parameter "template.application.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Name of application"
+    label = "Application Name"
+}
+
+parameter "template.helm.package.container" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "Container helm chart references"
+    label = "Container Image"
+}
+
+step "validate-helm-values" {
+    name = "Validate Helm Values"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"validating helm values again\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "inject-secrets-from-vault" {
+    name = "Inject Secrets From Vault"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Pulling secretsd\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "deploy-a-helm-chart" {
+    name = "Deploy a Helm Chart"
+    properties = {
+        Octopus.Action.TargetRoles = "#{template.kubernetes.target.tag}"
+    }
+
+    action {
+        action_type = "Octopus.HelmChartUpgrade"
+        properties = {
+            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.Helm.AdditionalArgs = "  --create-namespace"
+            Octopus.Action.Helm.ChartDirectory = "#{template.chart.directory}"
+            Octopus.Action.Helm.Namespace = "#{template.kubernetes.namespace}"
+            Octopus.Action.Helm.ReleaseName = "#{Octopus.Project.Name | ToLower | Replace \" \" \"-\" }-#{Octopus.Environment.Name | ToLower | Replace \" \" \"-\" }"
+            Octopus.Action.Helm.ResetValues = "True"
+            Octopus.Action.Helm.TemplateValuesSources = <<-EOT
+                [
+                  {
+                    "Type": "GitRepository",
+                    "GitRepositorySource": "External",
+                    "GitDependencyName": "TemplateValues-1",
+                    "ValuesFilePaths": "#{template.chart.values}"
+                  }
+                ]
+                EOT
+            Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
+            Octopus.Action.Script.ScriptSource = "GitRepository"
+        }
+        worker_pool_variable = ""
+
+        git_dependencies {
+            default_branch = "main"
+            git_credential_id = "GitCredentialIds-1"
+            git_credential_type = "Library"
+            repository_uri = "#{template.repository.url}"
+        }
+
+        git_dependencies "TemplateValues-1" {
+            default_branch = "main"
+            git_credential_id = "GitCredentialIds-1"
+            git_credential_type = "Library"
+            repository_uri = "#{template.repository.url}"
+        }
+
+        packages "template.helm.package.container" {
+            acquisition_location = "NotAcquired"
+            feed = "octopus-server-built-in"
+            package_id = ""
+            properties = {
+                Extract = "false"
+                PackageParameterName = "template.helm.package.container"
+                Purpose = "DockerImageReference"
+                SelectionMode = "deferred"
+            }
+        }
+    }
+}
+
+step "notify-stakeholders" {
+    name = "Notify Stakeholders"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"notify stakeholders\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

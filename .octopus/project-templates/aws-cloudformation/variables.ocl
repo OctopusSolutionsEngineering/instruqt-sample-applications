@@ -1,0 +1,7 @@
+variable "0:ParameterValue" {
+    value {}
+}
+
+variable "1:ParameterValue" {
+    value "#{Octopus.Environment.Name | ToLower}" {}
+}

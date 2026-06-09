@@ -1,0 +1,7 @@
+variable "no vlue" {
+    value {}
+}
+
+variable "hello" {
+    value "good bye" {}
+}

@@ -1,0 +1,64 @@
+name = "Verify Build Artifacts"
+description = <<-EOT
+        This process template uses GitHub's CLI tooling to verify the attestations on packages that were built and published as part of your CI/CD pipeline.
+        
+        This process will use docker login to authenticate to Docker Hub prior to the attestation check.
+        
+        See [this](https://octopus.com/blog/supply-chain-security-with-github-and-octopus-deploy) blog post for more information.
+        EOT
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Choose the work pool where to run scripts"
+    label = "Worker Pool"
+}
+
+step "verify-configuration" {
+    name = "Verify Configuration"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Verify configuration\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "attach-sbom-to-release" {
+    name = "Attach SBOM to Release"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Attatch SBOM\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "run-attestation-verification-on-build-artifacts" {
+    name = "Run Attestation Verification on Build Artifacts"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"run\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

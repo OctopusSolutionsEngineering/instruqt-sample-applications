@@ -1,0 +1,43 @@
+process_template "run-a-process-template" {
+    name = "Run a Process Template"
+    process_template_slug = "verify-build-artifacts"
+    version_mask = "1.X"
+
+    parameter "template.worker.pool" {
+        value = "#{flyway.worker.pool}"
+    }
+}
+
+process_template "run-flyway-migration" {
+    name = "Run Flyway Migration"
+    process_template_slug = "golden-flyway-template"
+    version_mask = "1.X"
+
+    parameter "template.worker.pool" {
+        value = "#{flyway.worker.pool}"
+    }
+
+    parameter "template.database.host" {
+        value = "#{flyway.database.host}"
+    }
+
+    parameter "template.database.name" {
+        value = "#{flyway.database.name}"
+    }
+
+    parameter "template.database.username" {
+        value = "#{flyway.database.username}"
+    }
+
+    parameter "template.database.password" {
+        value = "#{flyway.database.password}"
+    }
+
+    parameter "template.database.connection.string" {
+        value = "#{flyway.database.connection.string}"
+    }
+
+    parameter "template.migrations.package" {
+        value = "flyway.migrations.package"
+    }
+}

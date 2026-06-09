@@ -1,0 +1,153 @@
+name = "Golden AWS Baseline Template"
+description = "Standard process for publishing and rolling out AWS CloudFormation baselines.This template uploads a versioned CloudFormation package to S3, then updates the target stack (for the tenant’s AWS account and environment) using that template. Ideal for deploying account-level or platform baselines such as security, networking, and logging configurations."
+
+parameter "parameter.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Where should the the AWS steps run"
+    label = "Worker Pool"
+}
+
+parameter "parameter.package" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "Choose the package you want to deploy "
+    label = "StackSet Package"
+}
+
+parameter "parameter.work.tools.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = "Choose the worker tools you want to run this on"
+    label = "Octopus Worker Tools Feeds"
+}
+
+parameter "parameter.aws.account" {
+    display_settings = {
+        Octopus.ControlType = "AmazonWebServicesAccount"
+    }
+    help_text = "What AWS account to use"
+    label = "AWS Account"
+}
+
+step "upload-package-s3-bucket" {
+    name = "Stage Baseline Package to S3"
+
+    action "stage-baseline-package-to-s3" {
+        action_type = "Octopus.AwsUploadS3"
+        properties = {
+            Octopus.Action.Aws.AssumeRole = "False"
+            Octopus.Action.Aws.Region = "eu-west-2"
+            Octopus.Action.Aws.S3.BucketName = "adam-close-cfn-templates"
+            Octopus.Action.Aws.S3.FileSelections = "[{\"type\":\"SingleFile\",\"tags\":[],\"metadata\":[],\"cannedAcl\":\"private\",\"path\":\"aws-account-baseline.yaml\",\"storageClass\":\"STANDARD\",\"bucketKey\":\"aws-account-baseline.#{Octopus.Release.Number}.yaml\",\"bucketKeyPrefix\":\"\",\"bucketKeyBehaviour\":\"Custom\",\"performVariableSubstitution\":\"False\",\"performStructuredVariableSubstitution\":\"False\"}]"
+            Octopus.Action.Aws.S3.TargetMode = "FileSelections"
+            Octopus.Action.AwsAccount.UseInstanceRole = "False"
+            Octopus.Action.AwsAccount.Variable = "#{parameter.aws.account}"
+            Octopus.Action.RunOnServer = "true"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.4.0-ubuntu.22.04"
+        }
+
+        packages {
+            acquisition_location = "Server"
+            feed = "octopus-server-built-in"
+            package_id = ""
+            properties = {
+                PackageParameterName = "parameter.package"
+                SelectionMode = "deferred"
+            }
+        }
+    }
+}
+
+step "run-an-aws-cli-script" {
+    name = "Apply Baseline to Account"
+
+    action "apply-baseline-to-account" {
+        action_type = "Octopus.AwsRunScript"
+        properties = {
+            Octopus.Action.Aws.AssumeRole = "False"
+            Octopus.Action.Aws.Region = "eu-west-2"
+            Octopus.Action.AwsAccount.UseInstanceRole = "False"
+            Octopus.Action.AwsAccount.Variable = "#{parameter.aws.account}"
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                #!/bin/bash
+                
+                bucketName='adam-close-cfn-templates'
+                region='eu-west-2'
+                paramValue='aws-account-baseline-bucket-adam'
+                releaseVersion='#{Octopus.Release.Number}'
+                
+                templateUrl="https://${bucketName}.s3.${region}.amazonaws.com/aws-account-baseline.${releaseVersion}.yaml"
+                
+                echo "Updating CloudFormation stack 'aws-account-baseline' in region ${region}"
+                echo "Using template at ${templateUrl}"
+                echo "Using BucketNamePrefix=${paramValue}"
+                echo "Release version ${releaseVersion}"
+                
+                set +e
+                update_output=$(aws cloudformation update-stack \
+                  --stack-name aws-account-baseline \
+                  --template-url "${templateUrl}" \
+                  --parameters ParameterKey=BucketNamePrefix,ParameterValue="${paramValue}" \
+                  --capabilities CAPABILITY_NAMED_IAM \
+                  --region "${region}" 2>&1)
+                update_exit=$?
+                set -e
+                
+                echo "${update_output}"
+                
+                if echo "${update_output}" | grep -q "No updates are to be performed"; then
+                  echo "No changes detected. Stack already matches baseline ${releaseVersion}."
+                  echo "Skipping wait step."
+                  exit 0
+                fi
+                
+                if [ $update_exit -ne 0 ]; then
+                  echo "❌ update-stack failed with an unexpected error"
+                  exit $update_exit
+                fi
+                
+                echo "Waiting for stack update to complete..."
+                aws cloudformation wait stack-update-complete \
+                  --stack-name aws-account-baseline \
+                  --region "${region}"
+                
+                echo "✅ Stack update (or drift correction) complete for baseline version ${releaseVersion}"
+                
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "Bash"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.4.0-ubuntu.22.04"
+        }
+    }
+}
+
+step "notify-bu-of-changes" {
+    name = "Notify Stakeholders (Now teams)"
+
+    action "notify-stakeholders" {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"This is a dummy step template\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+    }
+}

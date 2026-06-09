@@ -1,0 +1,269 @@
+name = "Golden AWS CF Template"
+description = "Standard process for publishing and rolling out AWS CloudFormation baselines.This template uploads a versioned CloudFormation package to S3, then updates the target stack (for the tenant’s AWS account and environment) using that template. Ideal for deploying account-level or platform baselines such as security, networking, and logging configurations."
+
+parameter "parameter.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Where should the the AWS steps run"
+    label = "Worker Pool"
+}
+
+parameter "parameter.package" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "Choose the package you want to deploy "
+    is_optional = true
+    label = "StackSet Package"
+}
+
+parameter "parameter.work.tools.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = "Choose the worker tools you want to run this on"
+    label = "Octopus Worker Tools Feeds"
+}
+
+parameter "parameter.aws.account" {
+    display_settings = {
+        Octopus.ControlType = "AmazonWebServicesAccount"
+    }
+    help_text = "What AWS account to use"
+    label = "AWS Account"
+}
+
+parameter "template.cf.url" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Cloud Formation Git Repository "
+}
+
+parameter "template.cf.git.file" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Cloud Formation Template File"
+}
+
+parameter "tempate.cf.stack.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Cloud Formation Stack Name"
+}
+
+parameter "template.cf.git.variable.file" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Cloud Formation Variable Template File"
+}
+
+step "validate-change-set" {
+    name = "Validate Change Set"
+
+    action {
+        action_type = "Octopus.AwsRunCloudFormation"
+        properties = {
+            Octopus.Action.Aws.AssumeRole = "False"
+            Octopus.Action.Aws.CloudFormation.ChangeSet.Defer = "False"
+            Octopus.Action.Aws.CloudFormation.ChangeSet.GenerateName = "True"
+            Octopus.Action.Aws.CloudFormationStackName = "#{tempate.cf.stack.name}"
+            Octopus.Action.Aws.CloudFormationTemplate = "#{template.cf.git.file}"
+            Octopus.Action.Aws.CloudFormationTemplateParametersRaw = "#{template.cf.git.variable.file}"
+            Octopus.Action.Aws.Region = "eu-west-2"
+            Octopus.Action.Aws.TemplateSource = "GitRepository"
+            Octopus.Action.Aws.WaitForCompletion = "True"
+            Octopus.Action.AwsAccount.UseInstanceRole = "False"
+            Octopus.Action.AwsAccount.Variable = "#{parameter.aws.account}"
+            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.Package.JsonConfigurationVariablesTargets = "#{template.cf.git.file}"
+            Octopus.Action.RunOnServer = "true"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.5.0-ubuntu.22.04"
+        }
+
+        git_dependencies {
+            default_branch = "main"
+            git_credential_id = "GitCredentialIds-1"
+            git_credential_type = "Library"
+            repository_uri = "#{template.cf.url}"
+        }
+    }
+}
+
+step "deploy-an-aws-cloudformation-template" {
+    name = "Create an AWS CloudFormation Change"
+
+    action "create-an-aws-cloudformation-change" {
+        action_type = "Octopus.AwsRunCloudFormation"
+        properties = {
+            Octopus.Action.Aws.AssumeRole = "False"
+            Octopus.Action.Aws.CloudFormation.ChangeSet.Defer = "True"
+            Octopus.Action.Aws.CloudFormation.ChangeSet.GenerateName = "True"
+            Octopus.Action.Aws.CloudFormationStackName = "#{tempate.cf.stack.name}"
+            Octopus.Action.Aws.CloudFormationTemplate = "#{template.cf.git.file}"
+            Octopus.Action.Aws.CloudFormationTemplateParametersRaw = "#{template.cf.git.variable.file}"
+            Octopus.Action.Aws.Region = "eu-west-2"
+            Octopus.Action.Aws.TemplateSource = "GitRepository"
+            Octopus.Action.Aws.WaitForCompletion = "True"
+            Octopus.Action.AwsAccount.UseInstanceRole = "False"
+            Octopus.Action.AwsAccount.Variable = "#{parameter.aws.account}"
+            Octopus.Action.EnabledFeatures = "Octopus.Features.JsonConfigurationVariables,Octopus.Features.CloudFormation.ChangeSet.Feature"
+            Octopus.Action.GitRepository.Source = "External"
+            Octopus.Action.Package.JsonConfigurationVariablesTargets = "#{template.cf.git.file}"
+            Octopus.Action.RunOnServer = "true"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.5.0-ubuntu.22.04"
+        }
+
+        git_dependencies {
+            default_branch = "main"
+            git_credential_id = "GitCredentialIds-1"
+            git_credential_type = "Library"
+            repository_uri = "#{template.cf.url}"
+        }
+    }
+}
+
+step "display-cloud-formation-changes" {
+    name = "Display Cloud Formation Changes"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                #!/usr/bin/env bash
+                set -euo pipefail
+                
+                STEP="Create an AWS CloudFormation Change"
+                
+                CHANGESET_ID="#{Octopus.Action[Create an AWS CloudFormation Change].Output.AwsOutputs[ChangesetId]}"
+                STACK_ID="#{Octopus.Action[Create an AWS CloudFormation Change].Output.AwsOutputs[StackId]}"
+                CHANGE_COUNT="#{Octopus.Action[Create an AWS CloudFormation Change].Output.AwsOutputs[ChangeCount]}"
+                
+                # Heredoc keeps the JSON safe from quote/escape weirdness after Octopus substitutes it
+                CHANGES=$(cat <<'OCTOPUS_EOF'
+                #{Octopus.Action[Create an AWS CloudFormation Change].Output.AwsOutputs[Changes]}
+                OCTOPUS_EOF
+                )
+                
+                write_highlight "### CloudFormation change set ready for review"
+                write_highlight ""
+                write_highlight "| Field | Value |"
+                write_highlight "|---|---|"
+                write_highlight "| Stack | \`${STACK_ID}\` |"
+                write_highlight "| Change set | \`${CHANGESET_ID}\` |"
+                write_highlight "| Changes detected | **${CHANGE_COUNT}** |"
+                write_highlight ""
+                
+                if [ -z "${CHANGE_COUNT}" ] || [ "${CHANGE_COUNT}" = "0" ]; then
+                    write_highlight "No changes — the stack already matches the template."
+                    exit 0
+                fi
+                
+                write_highlight "**Planned resource changes:**"
+                write_highlight ""
+                
+                if command -v jq >/dev/null 2>&1 && [ -n "${CHANGES}" ]; then
+                    while IFS= read -r line; do
+                        write_highlight "${line}"
+                    done < <(echo "${CHANGES}" | jq -r '
+                        .[]
+                        | .ResourceChange
+                        | "- **\(.Action)** \(.LogicalResourceId) (`\(.ResourceType)`)"
+                          + (if .Replacement and .Replacement != "False"
+                             then " — :warning: Replacement: \(.Replacement)"
+                             else "" end)
+                    ')
+                else
+                    write_warning "jq not available on this worker — falling back to raw JSON"
+                    write_highlight '```json'
+                    write_highlight "${CHANGES}"
+                    write_highlight '```'
+                fi
+                
+                write_highlight ""
+                write_highlight "Approve the next step to execute this change set, or abort to cancel."
+                
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "Bash"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.5.0-ubuntu.22.04"
+        }
+    }
+}
+
+step "approve-cloud-formation-changes" {
+    name = "Approve Cloud Formation Changes"
+
+    action {
+        action_type = "Octopus.Manual"
+        properties = {
+            Octopus.Action.Manual.BlockConcurrentDeployments = "False"
+            Octopus.Action.Manual.Instructions = "Please review and approve Cloud Formation Changes"
+            Octopus.Action.Manual.ResponsibleTeamIds = "global/everyone"
+        }
+    }
+}
+
+step "apply-an-aws-cloudformation-change-set" {
+    name = "Apply an AWS CloudFormation Change Set"
+
+    action {
+        action_type = "Octopus.AwsApplyCloudFormationChangeSet"
+        properties = {
+            Octopus.Action.Aws.AssumeRole = "False"
+            Octopus.Action.Aws.CloudFormation.ChangeSet.Arn = "#{Octopus.Action[Cloud Formation Deployment Template-Create an AWS CloudFormation Change].Output.AwsOutputs[ChangesetId]}"
+            Octopus.Action.Aws.CloudFormationStackName = "#{tempate.cf.stack.name}"
+            Octopus.Action.Aws.Region = "eu-west-2"
+            Octopus.Action.Aws.WaitForCompletion = "True"
+            Octopus.Action.AwsAccount.UseInstanceRole = "False"
+            Octopus.Action.AwsAccount.Variable = "#{parameter.aws.account}"
+            Octopus.Action.RunOnServer = "true"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{parameter.work.tools.feed}"
+            image = "octopusdeploy/worker-tools:6.5.0-ubuntu.22.04"
+        }
+    }
+}
+
+step "notify-bu-of-changes" {
+    name = "Notify Stakeholders (Now teams)"
+
+    action "notify-stakeholders" {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"This is a dummy step template\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+    }
+}

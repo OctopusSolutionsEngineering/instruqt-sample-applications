@@ -1,0 +1,33 @@
+process_template "deploy-aws-cf" {
+    name = "Deploy AWS CloudFormation"
+    process_template_slug = "golden-aws-cf-template"
+    version_mask = "1.1.X"
+
+    parameter "parameter.worker.pool" {
+        value = "#{template.project.worker.pool}"
+    }
+
+    parameter "parameter.work.tools.feed" {
+        value = "#{template.project.work.tools.feed}"
+    }
+
+    parameter "parameter.aws.account" {
+        value = "#{template.project.aws.account}"
+    }
+
+    parameter "template.cf.url" {
+        value = "#{template.project.cf.url}"
+    }
+
+    parameter "template.cf.git.file" {
+        value = "#{template.project.cf.git.file}"
+    }
+
+    parameter "tempate.cf.stack.name" {
+        value = "#{template.project.cf.stack.name}"
+    }
+
+    parameter "template.cf.git.variable.file" {
+        value = "#{template.project.cf.git.varible.file}"
+    }
+}

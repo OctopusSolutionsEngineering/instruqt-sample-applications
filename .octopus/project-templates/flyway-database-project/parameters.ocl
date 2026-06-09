@@ -1,0 +1,55 @@
+parameter "flyway.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "The worker pool to run the Flyway migration on"
+    label = "Worker Pool"
+}
+
+parameter "flyway.database.host" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "The hostname or IP address of the database server (e.g. db.internal or 10.0.0.5)"
+    label = "Database Host"
+}
+
+parameter "flyway.database.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "The name of the target database to migrate"
+    label = "Database Name"
+}
+
+parameter "flyway.database.username" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "The username Flyway will use to connect to the database"
+    label = "Database Username"
+}
+
+parameter "flyway.database.password" {
+    display_settings = {
+        Octopus.ControlType = "Sensitive"
+    }
+    help_text = "The password for the database user. Store this in an Octopus secret or sensitive variable."
+    label = "Database Password"
+}
+
+parameter "flyway.database.connection.string" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "The JDBC connection string for the target database (e.g. jdbc:sqlserver://#{flyway.database.host};databaseName=#{flyway.database.name})"
+    label = "Connection String"
+}
+
+parameter "flyway.migrations.package" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "The package containing the Flyway migration scripts"
+    label = "Migrations Package"
+}

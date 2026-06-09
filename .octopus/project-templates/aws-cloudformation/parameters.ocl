@@ -1,0 +1,55 @@
+parameter "template.project.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Worker pool that runs the AWS CloudFormation step. Pick a pool whose workers can reach AWS (most demos: the default dynamic pool)."
+    label = "Worker Pool"
+}
+
+parameter "template.project.work.tools.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = "Docker feed hosting the worker-tools image (octopusdeploy/worker-tools). Usually the Docker Hub feed in the space."
+    label = "Worker Tools Feed"
+}
+
+parameter "template.project.aws.account" {
+    display_settings = {
+        Octopus.ControlType = "AmazonWebServicesAccount"
+    }
+    help_text = "AWS account the stack is deployed into. Both access-key and OpenID Connect accounts are supported."
+    label = "AWS Account"
+}
+
+parameter "template.project.cf.url" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "HTTPS URL of the Git repository containing the CloudFormation template (e.g. https://github.com/adamoctoclose/tatra-markets)."
+    label = "CloudFormation Git Repository URL"
+}
+
+parameter "template.project.cf.git.file" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Relative path inside the Git repo to the CloudFormation template (e.g. cfn/storage.yaml)."
+    label = "CloudFormation Template File"
+}
+
+parameter "template.project.cf.stack.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Name of the CloudFormation stack to create or update (must match the regex [a-zA-Z][-a-zA-Z0-9]*). Per-env scoping is usually done in project variables, e.g. tatra-storage-#{Octopus.Environment.Name | ToLower}."
+    label = "CloudFormation Stack Name"
+}
+
+parameter "template.project.cf.git.variable.file" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Cloud Formation Variable Template File"
+}

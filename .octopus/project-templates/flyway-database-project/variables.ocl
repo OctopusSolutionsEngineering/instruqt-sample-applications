@@ -1,0 +1,27 @@
+variable "template.worker.pool" {
+    value "#{flyway.worker.pool}" {}
+}
+
+variable "template.database.host" {
+    value "#{flyway.database.host}" {}
+}
+
+variable "template.database.name" {
+    value "#{flyway.database.name}" {}
+}
+
+variable "template.database.username" {
+    value "#{flyway.database.username}" {}
+}
+
+variable "template.database.password" {
+    value "#{flyway.database.password}" {}
+}
+
+variable "template.database.connection.string" {
+    value "#{flyway.database.connection.string}" {}
+}
+
+variable "template.migrations.package" {
+    value "#{flyway.migrations.package}" {}
+}

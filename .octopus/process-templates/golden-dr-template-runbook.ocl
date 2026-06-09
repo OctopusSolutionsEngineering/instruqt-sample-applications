@@ -1,0 +1,74 @@
+name = "Golden DR Template"
+description = "A reusable runbook template that standardizes disaster recovery procedures across environments and tenants. This \"golden path\" ensures consistent execution of DR operations such as service restoration, database recovery, and infrastructure validation. Ideal for regulated industries that require repeatable, auditable, and well-documented DR playbooks."
+
+parameter "template.helm.chart" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "The helm chart that you want to deploy in this process"
+    label = "Helm Chart"
+}
+
+parameter "template.kubernetes.target.tag" {
+    display_settings = {
+        Octopus.ControlType = "TargetTags"
+    }
+    help_text = "The Kubernetes cluster you want to install this helm chart on"
+    label = "Kubernetes Target Tag"
+}
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Choose the work pool where to run scripts"
+    label = "Worker Pool"
+}
+
+step "veryify-backup-integrity" {
+    name = "Verify HA Status"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"validating helm values\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "inject-secrets-from-vault" {
+    name = "Inject Secrets From Vault"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Pulling secretsd\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "notify-stakeholders" {
+    name = "Notify Stakeholders"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"notify stakeholders\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

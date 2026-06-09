@@ -1,0 +1,17 @@
+process_template "run-a-process-template" {
+    name = "Run a Process Template"
+    process_template_slug = "golden-argo-helm-deployment"
+    version_mask = "3.0.X"
+
+    parameter "template.worker.feed" {
+        value = "#{template.project.container.feed}"
+    }
+
+    parameter "template.argo.package" {
+        value = "template.project.package"
+    }
+
+    parameter "template.worker.pool" {
+        value = "#{template.project.worker.pool}"
+    }
+}

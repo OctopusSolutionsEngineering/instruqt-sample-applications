@@ -1,0 +1,7 @@
+name = "Flyway Database Project"
+description = "A standardized project template for deploying database schema migrations using Flyway. Provides a consistent, repeatable pattern for versioned migrations across environments. Includes parameters for database connectivity and a reference to the Golden Flyway process template."
+
+icon {
+    color = "#757575"
+    id = "layer-group"
+}

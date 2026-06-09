@@ -1,0 +1,106 @@
+name = "Golden Argo Helm Template"
+description = "A reusable process template for deploying Helm charts in a standardized and compliant manner. This template includes built-in best practices for versioning, environment targeting, and audit visibility. Ideal for teams adopting GitOps or managing Kubernetes workloads at scale."
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Choose the work pool where to run scripts"
+    label = "Worker Pool"
+}
+
+parameter "template.worker.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = ""
+    label = "Octopus Worker Feed"
+}
+
+parameter "template.argo.package" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = ""
+    label = "Container Image"
+}
+
+step "validate-helm-values" {
+    name = "Validate Helm Values"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"validating helm values again\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "inject-secrets-from-vault" {
+    name = "Inject Secrets From Azure Key Vault "
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Pulling secretsd\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "update-argo-cd-application-image-tags" {
+    name = "Update Argo CD Application Image Tags"
+
+    action {
+        action_type = "Octopus.ArgoCDUpdateImageTags"
+        properties = {
+            Octopus.Action.ArgoCD.CommitMessageSummary = "Octopus Deploy updated image versions"
+            Octopus.Action.ArgoCD.CommitMethod = "DirectCommit"
+            Octopus.Action.ArgoCD.Sync.Mode = "AllEnvironments"
+            Octopus.Action.RunOnServer = "true"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+
+        container {
+            feed = "#{template.worker.feed}"
+            image = "octopusdeploylabs/argocd-workertools"
+        }
+
+        packages "template.helm.package.container" {
+            acquisition_location = "NotAcquired"
+            feed = "octopus-server-built-in"
+            package_id = ""
+            properties = {
+                Extract = "false"
+                PackageParameterName = "template.argo.package"
+                Purpose = "DockerImageReference"
+                SelectionMode = "deferred"
+            }
+        }
+    }
+}
+
+step "notify-stakeholders" {
+    name = "Notify Stakeholders"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"notify stakeholders\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

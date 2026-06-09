@@ -1,0 +1,7 @@
+name = "WIndows IIS Template"
+description = ""
+
+icon {
+    color = "#757575"
+    id = "layer-group"
+}

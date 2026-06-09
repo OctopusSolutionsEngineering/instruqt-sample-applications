@@ -1,0 +1,162 @@
+name = "Golden Power Platform Template"
+description = "A standardized deployment template for Power Platform solutions and Dataverse configurations. It includes steps to authenticate via Service Principal, import managed solutions, map environment variables and connection references, and publish customizations. Ideal for consistent, repeatable ALM (Application Lifecycle Management) across Dev, Test, and Production environments, ensuring low-code assets are governed and deployed with the same rigor as traditional web applications."
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = ""
+    label = "Worker Pool"
+}
+
+parameter "template.application.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Application Name"
+}
+
+parameter "template.Package.Name" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = ""
+    label = "Package Name"
+}
+
+parameter "template.paramater.azure" {
+    display_settings = {
+        Octopus.ControlType = "AzureAccount"
+    }
+    help_text = "Choose the Service Principle to authenticate to Azure"
+    label = "Azure Account"
+}
+
+parameter "template.container.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = "The feed to get Octopus worker tools"
+    label = "Container Feed"
+}
+
+step "send-teams-notification" {
+    name = "Send Teams Notification"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"This is a dummy step template\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "clean-environment" {
+    name = "Check Environment Health"
+
+    action "check-environment-health" {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Cleaning Environment\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}
+
+step "power-platform-solution-import" {
+    name = "Power Platform Solution - Import"
+
+    action {
+        action_type = "Octopus.AzurePowerShell"
+        properties = {
+            Octopus.Action.Azure.AccountId = "#{template.paramater.azure}"
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                Write-Host "--- Power Platform Deployment Process ---"
+                Write-Host "Initializing connection to Dataverse..."
+                
+                # 1. Connectivity Check
+                Write-Host "Checking Power Platform CLI (PAC) installation..."
+                Write-Host "PAC version 1.30.4 detected. Proceeding..." -ForegroundColor Cyan
+                
+                # 2. Authentication Mock
+                Write-Host "Authenticating as Service Principal..."
+                # pac auth create --url $EnvUrl --tenant $TenantId --applicationId $ClientId --clientSecret $ClientSecret
+                Write-Host "Successfully connected to environment: [https://contoso-prod.crm.dynamics.com]" -ForegroundColor Green
+                
+                # 3. Solution Import Simulation
+                Write-Host "Starting import of solution package: MyBusinessApp_1_0_0_managed.zip"
+                Write-Host "Note: Import is running in 'Async' mode to prevent timeout."
+                
+                $ImportSteps = @(
+                    "Uploading package to Dataverse...",
+                    "Validating solution components...",
+                    "Applying connection reference mappings...",
+                    "Updating environment variables...",
+                    "Processing metadata updates..."
+                )
+                
+                foreach ($step in $ImportSteps) {
+                    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $step"
+                    Start-Sleep -Seconds 1 # Simulates the time taken for each stage
+                }
+                
+                # 4. Success State
+                Write-Host "Import completed successfully." -ForegroundColor Green
+                
+                # 5. Post-Deployment Actions
+                Write-Host "Publishing all customizations..."
+                # pac solution publish --all
+                Write-Host "Activating Power Automate flows..."
+                Write-Host "Deployment finished. Solution is now live." -ForegroundColor Green
+                
+                Write-Host "--- End of Octopus Task ---"
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+
+        container {
+            feed = "#{template.container.feed}"
+            image = "octopusdeploylabs/azure-workertools"
+        }
+
+        packages "template.Package.Name" {
+            acquisition_location = "Server"
+            feed = "octopus-server-built-in"
+            package_id = ""
+            properties = {
+                Extract = "True"
+                PackageParameterName = "template.Package.Name"
+                SelectionMode = "deferred"
+            }
+        }
+    }
+}
+
+step "run-smoke-tests" {
+    name = "Run Smoke Tests"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Run smoke tests\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

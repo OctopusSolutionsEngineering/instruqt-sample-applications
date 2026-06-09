@@ -1,0 +1,36 @@
+name = "Require Attestation Verification"
+violation_action = "block"
+violation_reason = "You have no verified the build Artifacts before deploying to Production. Please Add a step to verify the build Artefacts to continue. "
+
+conditions {
+    rego = <<-EOT
+            package require_attestation_verification
+            
+            default result := {"allowed": false}
+            
+            # Step is at the start
+            result := {"allowed": true} if {
+                input.Steps[0].Source.SlugOrId == "verify-build-artifacts"
+            }
+            
+            # Step is at the end
+            result := {"allowed": true} if {
+                input.Steps[count(input.Steps)-1].Source.SlugOrId == "verify-build-artifacts"
+            }
+            EOT
+}
+
+scope {
+    rego = <<-EOT
+            package require_attestation_verification
+            
+                default evaluate := false
+            
+                evaluate := true if {
+            
+                    input.Environment.Name == "Production"
+            
+                }
+            
+            EOT
+}

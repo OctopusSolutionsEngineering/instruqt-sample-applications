@@ -1,0 +1,176 @@
+name = "Golden IIS Template"
+description = "A standardized deployment template for applications hosted on IIS. It includes steps to deploy web content, transform web.config, manage application pools, and verify site availability. Ideal for consistent, repeatable deployments across environments and tenants using Windows Server and IIS"
+
+parameter "template.windows.target.tag" {
+    display_settings = {
+        Octopus.ControlType = "TargetTags"
+    }
+    help_text = ""
+    label = "Windows Target Tag"
+}
+
+parameter "template.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = ""
+    label = "Worker Pool"
+}
+
+parameter "template.application.name" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "Application Name"
+}
+
+parameter "template.Package.Name" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = ""
+    label = "Package Name"
+}
+
+parameter "template.environemnt" {
+    display_settings = {
+        Octopus.ControlType = "Environments"
+    }
+    help_text = ""
+    label = "Environment"
+}
+
+parameter "template.IIS.Port" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = ""
+    label = "IIS Port"
+}
+
+step "clean-environment" {
+    name = "Clean Environment"
+    properties = {
+        Octopus.Action.TargetRoles = "#{template.windows.target.tag}"
+    }
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "false"
+            Octopus.Action.Script.ScriptBody = <<-EOT
+                # Remove all IIS websites (no prompts)
+                
+                # Require IIS cmdlets
+                Import-Module WebAdministration -ErrorAction Stop
+                
+                $sites = Get-Website
+                if (-not $sites) {
+                  Write-Host "No IIS websites found."
+                  return
+                }
+                
+                foreach ($s in $sites) {
+                  try {
+                    Write-Host "Removing site: $($s.Name)"
+                    Stop-Website   -Name $s.Name -ErrorAction SilentlyContinue
+                    Remove-Website -Name $s.Name -ErrorAction Stop
+                  }
+                  catch {
+                    Write-Warning "Failed to remove site '$($s.Name)': $($_.Exception.Message)"
+                  }
+                }
+                
+                Write-Host "Done. All IIS websites removed."
+                
+                EOT
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = ""
+    }
+}
+
+step "deploy-application-package" {
+    name = "Deploy Application Package"
+    properties = {
+        Octopus.Action.TargetRoles = "#{template.windows.target.tag}"
+    }
+
+    action "remove-from-load-balancer" {
+        action_type = "Octopus.Script"
+        name = "Remove From Load Balancer 2"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Remove from LB\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+
+    action "deploy-application-package" {
+        action_type = "Octopus.IIS"
+        name = "Deploy Application Package"
+        properties = {
+            Octopus.Action.EnabledFeatures = ",Octopus.Features.IISWebSite,Octopus.Features.ConfigurationTransforms,Octopus.Features.ConfigurationVariables"
+            Octopus.Action.IISWebSite.ApplicationPoolFrameworkVersion = "v4.0"
+            Octopus.Action.IISWebSite.ApplicationPoolIdentityType = "ApplicationPoolIdentity"
+            Octopus.Action.IISWebSite.ApplicationPoolName = "#{template.application.name}"
+            Octopus.Action.IISWebSite.Bindings = "[{\"protocol\":\"http\",\"ipAddress\":\"*\",\"port\":\"#{template.IIS.Port}\",\"host\":\"\",\"thumbprint\":null,\"certificateVariable\":null,\"requireSni\":\"False\",\"enabled\":\"True\"}]"
+            Octopus.Action.IISWebSite.CreateOrUpdateWebSite = "True"
+            Octopus.Action.IISWebSite.DeploymentType = "webSite"
+            Octopus.Action.IISWebSite.EnableAnonymousAuthentication = "False"
+            Octopus.Action.IISWebSite.EnableBasicAuthentication = "False"
+            Octopus.Action.IISWebSite.EnableWindowsAuthentication = "True"
+            Octopus.Action.IISWebSite.StartApplicationPool = "True"
+            Octopus.Action.IISWebSite.StartWebSite = "True"
+            Octopus.Action.IISWebSite.WebApplication.ApplicationPoolFrameworkVersion = "v4.0"
+            Octopus.Action.IISWebSite.WebApplication.ApplicationPoolIdentityType = "ApplicationPoolIdentity"
+            Octopus.Action.IISWebSite.WebRootType = "packageRoot"
+            Octopus.Action.IISWebSite.WebSiteName = "#{template.application.name}"
+            Octopus.Action.Package.AutomaticallyRunConfigurationTransformationFiles = "True"
+            Octopus.Action.Package.AutomaticallyUpdateAppSettingsAndConnectionStrings = "True"
+        }
+        worker_pool_variable = ""
+
+        packages {
+            acquisition_location = "Server"
+            feed = "octopus-server-built-in"
+            package_id = ""
+            properties = {
+                PackageParameterName = "template.Package.Name"
+                SelectionMode = "deferred"
+            }
+        }
+    }
+
+    action "run-smoke-tests" {
+        action_type = "Octopus.Script"
+        name = "Run Smoke Tests"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"Run smoke tests\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+
+    action "add-to-load-balancer" {
+        action_type = "Octopus.Script"
+        name = "Add to Load Balancer"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "write-host \"add to load balancer\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool_variable = "#{template.worker.pool}"
+    }
+}

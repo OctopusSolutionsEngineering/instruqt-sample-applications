@@ -1,0 +1,23 @@
+parameter "template.project.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Choose where you want these project steps to run"
+    label = "Worker Pool"
+}
+
+parameter "template.project.container.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = "choose the container feed where to image comes from"
+    label = "Container Feed"
+}
+
+parameter "template.project.package" {
+    display_settings = {
+        Octopus.ControlType = "Package"
+    }
+    help_text = "Choose image to deploy "
+    label = "Container Image"
+}

@@ -1,0 +1,69 @@
+name = "Golden Terraform Template"
+description = "A generic, provider-agnostic infrastructure-as-code deployment template using Octopus's built-in Terraform steps. Runs a plan for review, gates on manual approval, then applies. Supports any Terraform provider — AWS, Azure, local, or custom. Cloud credentials are injected via worker IAM roles or project-level variables. Terraform state backend is configured in the package's backend.tf. Ideal for platform teams standardising infrastructure provisioning across environments and tenants."
+
+parameter "parameter.worker.pool" {
+    display_settings = {
+        Octopus.ControlType = "WorkerPool"
+    }
+    help_text = "Worker pool where Terraform plan and apply run. The worker needs network access to download Terraform providers (or a local mirror configured in the package)."
+    label = "Worker Pool"
+}
+
+parameter "parameter.terraform.workspace" {
+    display_settings = {
+        Octopus.ControlType = "SingleLineText"
+    }
+    help_text = "Terraform workspace to select before plan/apply. Set to #{Octopus.Environment.Name | ToLower} to give each environment isolated state, or 'default' to disable workspace isolation."
+    label = "Terraform Workspace"
+}
+
+parameter "paramter.worker.feed" {
+    display_settings = {
+        Octopus.ControlType = "Feed"
+    }
+    help_text = ""
+    label = "Worker Container Feed"
+}
+
+step "notify-stakeholders" {
+    name = "Notify Stakeholders"
+
+    action {
+        action_type = "Octopus.Script"
+        properties = {
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptBody = "Write-Host \"Terraform apply complete for #{Octopus.Project.Name} in #{Octopus.Environment.Name}\""
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Script.Syntax = "PowerShell"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+    }
+}
+
+step "apply-a-terraform-template" {
+    name = "Apply a Terraform template"
+
+    action {
+        action_type = "Octopus.TerraformApply"
+        properties = {
+            Octopus.Action.GoogleCloud.ImpersonateServiceAccount = "False"
+            Octopus.Action.GoogleCloud.UseVMServiceAccount = "True"
+            Octopus.Action.RunOnServer = "true"
+            Octopus.Action.Script.ScriptSource = "Inline"
+            Octopus.Action.Terraform.AllowPluginDownloads = "True"
+            Octopus.Action.Terraform.AzureAccount = "False"
+            Octopus.Action.Terraform.GoogleCloudAccount = "False"
+            Octopus.Action.Terraform.ManagedAccount = "None"
+            Octopus.Action.Terraform.PlanJsonOutput = "False"
+            Octopus.Action.Terraform.RunAutomaticFileSubstitution = "True"
+            Octopus.Action.Terraform.Template = "{}"
+            Octopus.Action.Terraform.TemplateParameters = "{}"
+        }
+        worker_pool_variable = "#{parameter.worker.pool}"
+
+        container {
+            feed = "#{paramter.worker.feed}"
+            image = "octopusdeploy/worker-tools:6.5.0-ubuntu.22.04"
+        }
+    }
+}

@@ -1,0 +1,7 @@
+parameter "template.target" {
+    display_settings = {
+        Octopus.ControlType = "TargetTags"
+    }
+    help_text = ""
+    label = "Target"
+}

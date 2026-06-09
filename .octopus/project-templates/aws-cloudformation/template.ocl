@@ -1,0 +1,7 @@
+name = "AWS CloudFormation"
+description = "Project scaffolding for deploying AWS CloudFormation stacks. The deployment process uses the Golden AWS CF Template process template, runs on a worker with the AWS CLI execution container, and pulls the CloudFormation YAML directly from a Git repository."
+
+icon {
+    color = "#FF9900"
+    id = "cloud"
+}
