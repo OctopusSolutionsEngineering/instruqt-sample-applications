@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: financia-retail-set
+  name: sample-set
   namespace: argocd
 spec:
   generators:
@@ -23,7 +23,7 @@ spec:
                 - env: production
   template:
     metadata:
-      name: 'financia-{{app}}-{{env}}'
+      name: 'sample-{{app}}-{{env}}'
       annotations:
         argo.octopus.com/project: "{{octopus_project}}"
         argo.octopus.com/environment: "{{env}}"
