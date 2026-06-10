@@ -1,7 +1,7 @@
 process_template "deploy-aws-cf" {
     name = "Deploy AWS CloudFormation"
     process_template_slug = "golden-aws-cf-template"
-    version_mask = "1.1.X"
+    version_mask = "1.X"
 
     parameter "parameter.worker.pool" {
         value = "#{template.project.worker.pool}"

@@ -1,7 +1,7 @@
 process_template "run-a-process-template" {
     name = "Run a Process Template"
     process_template_slug = "golden-argo-helm-deployment"
-    version_mask = "3.0.X"
+    version_mask = "1.X"
 
     parameter "template.worker.feed" {
         value = "#{template.project.container.feed}"

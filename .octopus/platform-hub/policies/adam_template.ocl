@@ -1,9 +1,9 @@
-name = "adam-templatre"
+name = "adam-template"
 violation_action = "block"
 
 conditions {
     rego = <<-EOT
-            package adam_templatre
+            package adam_template
             
             # Default: Deny all
             default result := {"allowed": false}
@@ -29,7 +29,7 @@ conditions {
 
 scope {
     rego = <<-EOT
-            package adam_templatre
+            package adam_template
             
             default evaluate := true
             
