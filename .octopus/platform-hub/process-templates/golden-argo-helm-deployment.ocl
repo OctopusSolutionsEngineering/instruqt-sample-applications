@@ -70,11 +70,6 @@ step "update-argo-cd-application-image-tags" {
         }
         worker_pool_variable = "#{template.worker.pool}"
 
-        container {
-            feed = "#{template.worker.feed}"
-            image = "octopusdeploylabs/argocd-workertools"
-        }
-
         packages "template.helm.package.container" {
             acquisition_location = "NotAcquired"
             feed = "octopus-server-built-in"
