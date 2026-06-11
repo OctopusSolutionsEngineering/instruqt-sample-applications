@@ -1,5 +1,6 @@
 name = "Kubernetes Helm"
 description = ""
+persistence = "Git"
 
 icon {
     color = "#757575"
