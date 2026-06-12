@@ -80,6 +80,7 @@ jobs:
       # project already exists in Octopus. If it does not exist, the build has
       # already completed above so we simply finish successfully.
       - name: Create Octopus release for sample-frontend
+        if: github.run_number != 1
         env:
           OCTOPUS_URL: ${{ secrets.OCTOPUSURL }}
           OCTOPUS_API_KEY: ${{ secrets.OCTOPUSAPIKEY }}
