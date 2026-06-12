@@ -74,3 +74,69 @@ jobs:
             -t "gitea:3000/admin/sample-api:${{ env.RELEASE_VERSION }}" \
             -t "gitea:3000/admin/sample-api:latest" \
             Api/
+
+      # --- Octopus release (frontend) ---
+      # Creates a release for the "sample-frontend" project, but only if that
+      # project already exists in Octopus. If it does not exist, the build has
+      # already completed above so we simply finish successfully.
+      - name: Create Octopus release for sample-frontend
+        env:
+          OCTOPUS_URL: ${{ secrets.OCTOPUSURL }}
+          OCTOPUS_API_KEY: ${{ secrets.OCTOPUSAPIKEY }}
+          OCTOPUS_SPACE: ${{ secrets.OCTOPUSSPACE }}
+          PROJECT_NAME: sample-frontend
+        run: |
+          set -euo pipefail
+
+          # Fall back to the track defaults when secrets are not configured.
+          OCTOPUS_URL="${OCTOPUS_URL:-http://octopus:8080}"
+          OCTOPUS_API_KEY="${OCTOPUS_API_KEY:-API-VRCTL0YFVVEEJLRBRPWH}"
+          OCTOPUS_SPACE="${OCTOPUS_SPACE:-Spaces-1}"
+
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "Installing jq..."
+            (sudo apt-get update && sudo apt-get install -y jq) \
+              || (apt-get update && apt-get install -y jq)
+          fi
+
+          echo "Looking up project '${PROJECT_NAME}' in Octopus (${OCTOPUS_URL})..."
+          PROJECT=$(curl -fsS \
+            -H "X-Octopus-ApiKey: ${OCTOPUS_API_KEY}" \
+            "${OCTOPUS_URL}/api/${OCTOPUS_SPACE}/projects?partialName=${PROJECT_NAME}&take=100" \
+            | jq -c --arg n "$PROJECT_NAME" 'first(.Items[] | select(.Name == $n)) // empty')
+
+          if [ -z "$PROJECT" ]; then
+            echo "Project '${PROJECT_NAME}' not found in Octopus — nothing to release. Build complete."
+            exit 0
+          fi
+
+          PROJECT_ID=$(echo "$PROJECT" | jq -r '.Id')
+          PERSISTENCE=$(echo "$PROJECT" | jq -r '.PersistenceSettings.Type // "Database"')
+          DEFAULT_BRANCH=$(echo "$PROJECT" | jq -r '.PersistenceSettings.DefaultBranch // "main"')
+          echo "Found project ${PROJECT_ID} (persistence: ${PERSISTENCE})."
+
+          # Build the release-create command. For Config-as-Code projects a GitRef
+          # is required; database-backed projects must not send one. We just built
+          # and pushed the images tagged with RELEASE_VERSION, so resolve all
+          # packages to that same version.
+          BODY=$(jq -n \
+            --arg space "$OCTOPUS_SPACE" \
+            --arg project "$PROJECT_NAME" \
+            --arg version "${{ env.RELEASE_VERSION }}" \
+            --arg gitref "refs/heads/${DEFAULT_BRANCH}" \
+            --arg persistence "$PERSISTENCE" \
+            '{
+               spaceIdOrName: $space,
+               projectName: $project,
+               releaseVersion: $version,
+               packageVersion: $version
+             } + (if $persistence == "VersionControlled" then {gitRef: $gitref} else {} end)')
+
+          echo "Creating release ${{ env.RELEASE_VERSION }} for '${PROJECT_NAME}'..."
+          RESPONSE=$(curl -fsS -X POST \
+            -H "X-Octopus-ApiKey: ${OCTOPUS_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "${OCTOPUS_URL}/api/${OCTOPUS_SPACE}/releases/create/v1")
+
+          echo "$RESPONSE" | jq -r '"✓ Created release \(.ReleaseVersion // "?") (\(.ReleaseId // "?"))"'
