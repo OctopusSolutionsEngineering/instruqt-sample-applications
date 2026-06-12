@@ -1,6 +1,6 @@
 name = "Require Attestation Verification"
 violation_action = "block"
-violation_reason = "You have no verified the build Artifacts before deploying to Production. Please Add a step to verify the build Artefacts to continue. "
+violation_reason = "You have not verified the build Artifacts before deploying to Test or Production. Please Add a step to verify the build Artifacts to continue. "
 
 conditions {
     rego = <<-EOT
