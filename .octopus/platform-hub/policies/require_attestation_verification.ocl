@@ -23,14 +23,16 @@ conditions {
 scope {
     rego = <<-EOT
             package require_attestation_verification
-            
+
                 default evaluate := false
-            
-                evaluate := true if {
-            
-                    input.Environment.Name == "Production"
-            
+                is_evaluated_environment if {
+                    envs := ["test", "production"]
+                    input.Environment.Slug in envs
                 }
-            
+
+                evaluate := true if {
+                    is_evaluated_environment
+                }
+
             EOT
 }
