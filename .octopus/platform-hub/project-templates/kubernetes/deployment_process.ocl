@@ -1,5 +1,5 @@
 process_template "run-a-process-template" {
-    name = "Run a Process Template"
+    name = "Deploy Golden Argo Helm"
     process_template_slug = "golden-argo-helm-deployment"
     version_mask = "1.X"
 
