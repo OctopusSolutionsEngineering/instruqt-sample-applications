@@ -156,6 +156,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          sleep 5
+
           # Fall back to the track defaults when secrets are not configured.
           OCTOPUS_URL="${OCTOPUS_URL:-http://octopus:8080}"
           OCTOPUS_API_KEY="${OCTOPUS_API_KEY:-API-VRCTL0YFVVEEJLRBRPWH}"
