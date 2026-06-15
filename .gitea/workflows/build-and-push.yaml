@@ -156,7 +156,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          sleep 5
+          sleep 10
 
           # Fall back to the track defaults when secrets are not configured.
           OCTOPUS_URL="${OCTOPUS_URL:-http://octopus:8080}"
