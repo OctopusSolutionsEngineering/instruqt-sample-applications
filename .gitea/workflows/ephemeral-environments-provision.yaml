@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:      
 #    paths-ignore:
 #      - 'update-file.txt
 
@@ -26,7 +27,7 @@ jobs:
           server: ${{ secrets.LOCAL_OCTOPUS_SERVER_URL }}
           api_key: ${{ secrets.LOCAL_OCTOPUS_API_KEY }}
           name: 'ephemeral-environment-pr-${{ github.event.pull_request.number }}'
-          project: 'Ephemeral Environments'
+          project: '${{ vars.PROJECT_NAME}}'
           space: 'Default'
 
       - name: Get latest SHA
@@ -37,7 +38,7 @@ jobs:
         id: create_a_release_in_octopus_deploy  
         uses: OctopusDeploy/create-release-action@v4
         with:
-          project: 'Ephemeral Environments'
+          project: '${{ vars.PROJECT_NAME}}'
           server: ${{ secrets.LOCAL_OCTOPUS_SERVER_URL }}
           api_key: ${{ secrets.LOCAL_OCTOPUS_API_KEY }}
           space: 'Default'
