@@ -14,9 +14,14 @@
     <label>Title: <input type="text" id="title" required /></label><br/>
     <label>Description: <input type="text" id="description" /></label><br/>
     <button type="submit">Add</button>
+    @if (Model.isFeatureEnabled)
+    {
+        <p>@(Model.flagSlug) is enabled!</p>
+    }
 </form>
 
 @inject Microsoft.Extensions.Options.IOptions<FrontendConfig> Config
+
 
 <script>
   const apiBase = "@(Config.Value.ApiBaseUrl)/items";

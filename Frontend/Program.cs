@@ -1,9 +1,19 @@
 using Microsoft.Extensions.Options;
+using OpenFeature;
+using OpenFeature.Hosting;
+using OpenFeature.Hosting.Providers.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Bind configuration to FrontendConfig and register for DI
 builder.Services.Configure<FrontendConfig>(builder.Configuration);
+
+// Register OpenFeature — no AddHostedFeatureLifecycle() needed anymore
+builder.Services.AddOpenFeature(featureBuilder =>
+{
+    featureBuilder
+        .AddInMemoryProvider(); // swap for your real provider
+});
 
 // Add Razor Pages
 builder.Services.AddRazorPages();
