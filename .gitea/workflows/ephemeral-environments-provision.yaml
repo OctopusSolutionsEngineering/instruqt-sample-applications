@@ -3,12 +3,10 @@ permissions:
   contents: write
   packages: write
 on:
-  pull_request:
-    branches:
-      - main
+  # pull_request:
+  #   branches:
+  #     - main
   workflow_dispatch:      
-#    paths-ignore:
-#      - 'update-file.txt
 
 jobs:
   provision-ephemeral-environment:
@@ -28,7 +26,7 @@ jobs:
           api_key: ${{ secrets.LOCAL_OCTOPUS_API_KEY }}
           name: 'ephemeral-environment-pr-${{ github.event.pull_request.number }}'
           project: '${{ vars.PROJECT_NAME}}'
-          space: 'Default'
+          space: '${{ vars.SPACE_NAME}}'
 
       - name: Get latest SHA
         id: get_sha
@@ -41,7 +39,7 @@ jobs:
           project: '${{ vars.PROJECT_NAME}}'
           server: ${{ secrets.LOCAL_OCTOPUS_SERVER_URL }}
           api_key: ${{ secrets.LOCAL_OCTOPUS_API_KEY }}
-          space: 'Default'
+          space: '${{ vars.SPACE_NAME}}'
           git_ref: ${{ github.head_ref }}
           git_commit: ${{ steps.get_sha.outputs.sha }}
           channel: 'Ephemeral Environments'
@@ -52,7 +50,7 @@ jobs:
         env:
           OCTOPUS_API_KEY: ${{ secrets.LOCAL_OCTOPUS_API_KEY }}
           OCTOPUS_URL: ${{ secrets.LOCAL_OCTOPUS_SERVER_URL }}
-          OCTOPUS_SPACE: 'Default'
+          OCTOPUS_SPACE: '${{ vars.SPACE_NAME}}'
         with:
           project: '${{ vars.PROJECT_NAME}}'
           release_number: ${{ steps.create_a_release_in_octopus_deploy.outputs.release_number }}
