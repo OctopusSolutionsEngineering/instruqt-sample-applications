@@ -48,13 +48,31 @@ jobs:
           docker buildx use instruqt-builder || docker buildx create --name instruqt-builder --config buildkitd.toml --use --bootstrap --driver-opt network=octopusdeploy_default
 
 
-      # --- Frontend ---
+      - name: Resolve NuGet server IP
+        run: |
+          NUGET_IP=$(docker network inspect octopusdeploy_default \
+            --format '{{range .Containers}}{{if eq .Name "nuget-server"}}{{.IPv4Address}}{{end}}{{end}}' \
+            | cut -d/ -f1)
+          if [ -n "$NUGET_IP" ]; then
+            echo "Resolved nuget-server -> $NUGET_IP"
+          else
+            echo "::warning::Could not resolve nuget-server on octopusdeploy_default; builds will run without --add-host override"
+          fi
+          echo "NUGET_IP=$NUGET_IP" >> $GITHUB_ENV
+
+
+     # --- Frontend ---
       - name: Build & Push Frontend
         run: |
+          ADD_HOST_ARGS=()
+          if [ -n "${NUGET_IP:-}" ]; then
+            ADD_HOST_ARGS=(--add-host "nuget-server:${NUGET_IP}")
+          fi
           docker buildx build \
             --platform linux/amd64 \
             --provenance=false \
             --output "type=registry,oci-mediatypes=false" \
+            "${ADD_HOST_ARGS[@]}" \
             --secret id=REGISTRY_USER,env=REGISTRY_USER \
             --secret id=REGISTRY_PASS,env=REGISTRY_PASS \
             -t "gitea:3000/admin/sample-frontend:${{ env.RELEASE_VERSION }}" \
@@ -67,13 +85,21 @@ jobs:
       # --- API ---
       - name: Build & Push API
         run: |
+          ADD_HOST_ARGS=()
+          if [ -n "${NUGET_IP:-}" ]; then
+            ADD_HOST_ARGS=(--add-host "nuget-server:${NUGET_IP}")
+          fi
           docker buildx build \
             --platform linux/amd64 \
             --provenance=false \
             --output "type=registry,oci-mediatypes=false" \
+            "${ADD_HOST_ARGS[@]}" \
             -t "gitea:3000/admin/sample-api:${{ env.RELEASE_VERSION }}" \
             -t "gitea:3000/admin/sample-api:latest" \
             Api/
+        env:
+          REGISTRY_USER: ${{ secrets.GITEAUSERNAME }}
+          REGISTRY_PASS: ${{ secrets.GITEATOKEN }}
 
       # --- Octopus release (frontend) ---
       # Creates a release for the "sample-frontend" project, but only if that
