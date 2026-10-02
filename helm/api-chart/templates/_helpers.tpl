@@ -1,5 +1,5 @@
 {{- define "demo-api.name" -}}
-demo-frontend
+demo-api
 {{- end }}
 
 {{- define "demo-api.fullname" -}}
